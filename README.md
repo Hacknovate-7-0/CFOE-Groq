@@ -65,7 +65,7 @@ CfoE is a multi-agent ESG audit system that helps teams evaluate supplier carbon
 | Layer         | Technology                            | Purpose                                  |
 | ------------- | ------------------------------------- | ---------------------------------------- |
 | Language      | Python 3.10+                          | Core implementation                      |
-| AI SDK        | google-genai                          | LLM content generation                   |
+| AI SDK        | groq                                  | LLM content generation                   |
 | Web API       | FastAPI                               | Backend endpoints for audits and metrics |
 | Web Server    | Uvicorn                               | Local ASGI server                        |
 | Frontend      | HTML, CSS, JavaScript                 | Interactive dashboard UI                 |
@@ -78,7 +78,7 @@ CfoE is a multi-agent ESG audit system that helps teams evaluate supplier carbon
 | Requirement         | Notes                                |
 | ------------------- | ------------------------------------ |
 | Python 3.10+        | Verified with local venv setup       |
-| Google API Key      | Set `GOOGLE_API_KEY` in `.env`       |
+| Groq API Key        | Set `GROQ_API_KEY` in `.env`         |
 | Internet access     | Needed for live model calls          |
 | Virtual environment | Recommended for dependency isolation |
 
@@ -129,7 +129,7 @@ sequenceDiagram
     participant C as Coordinator
     participant S as Scoring Engine
     participant P as Policy Engine
-    participant G as Gemini Model
+    participant G as Groq Model
     participant H as History Store
 
     A->>F: Submit supplier data
@@ -214,7 +214,7 @@ CO2 footprint/
 
 ### Option B: CLI Script
 
-1. Ensure `.env` contains `GOOGLE_API_KEY`.
+1. Ensure `.env` contains `GROQ_API_KEY`.
 2. Run: `python main.py`
 3. Review example low/moderate/critical outputs in terminal.
 
@@ -243,13 +243,18 @@ CO2 footprint/
 Create `.env` in project root:
 
 ```env
-GOOGLE_API_KEY=your_key_here
+GROQ_API_KEY=your_groq_api_key_here
+
+# Optional: Tavily Search API for external risk monitoring
+TAVILY_API_KEY=your_tavily_api_key_here
 ```
 
 ### Dev Notes
 
 - Core deterministic logic lives in `agents/calculation_agent.py` and `agents/policy_agent.py`.
+- Groq configuration and client setup in `config/groq_config.py`.
 - Coordinator and report orchestration live in `orchestrators/root_coordinator.py`.
+- Frontend consumes REST endpoints exposed by `webapp.py`.and report orchestration live in `orchestrators/root_coordinator.py`.
 - Frontend consumes REST endpoints exposed by `webapp.py`.
 
 ---

@@ -94,22 +94,17 @@ Report Source: AI-Generated (Groq Llama)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 REFERENCES & RESOURCES:
-• ESG Reporting Standards: https://www.globalreporting.org/standards/
-• Carbon Disclosure Project: https://www.cdp.net/
-• Science Based Targets Initiative: https://sciencebasedtargets.org/
-• EPA Compliance Resources: https://www.epa.gov/compliance
+• Supplier Data Source: [Supplier Name] - Emissions: [X] tons CO2, Violations: [X]
+• GHG Protocol Corporate Standard: https://ghgprotocol.org/corporate-standard
+• EPA Greenhouse Gas Reporting: https://www.epa.gov/ghgreporting
 • ISO 14001 Environmental Management: https://www.iso.org/iso-14001-environmental-management.html
+• Carbon Disclosure Project (CDP): https://www.cdp.net/
+• Science Based Targets Initiative: https://sciencebasedtargets.org/
+• Global Reporting Initiative (GRI): https://www.globalreporting.org/standards/
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CRITICAL REQUIREMENTS:
-- Use actual values from context, NEVER use placeholders
-- Write in professional, detailed business language
-- Each section should have substantial content (not just 1 sentence)
-- Total report should be 20-30 sentences minimum
-- Be specific with numbers, dates, and concrete details
-- Format tables and lists for readability
-- Ensure proper line breaks and spacing
+IMPORTANT: Use actual values from context, write in professional business language with specific numbers and concrete details. Each section should have substantial content (20-30 sentences total).
 """
     
     reporting_agent = LLMAgent(
