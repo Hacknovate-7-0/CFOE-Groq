@@ -309,24 +309,123 @@ function renderCompare() {
   }
 
   const [a, b] = picks;
-  const delta = (b.risk_score - a.risk_score).toFixed(2);
+  const scoreDelta = (b.risk_score - a.risk_score).toFixed(2);
+  const emissionsDelta = (b.emissions - a.emissions).toFixed(2);
+  const violationsDelta = b.violations - a.violations;
+  
+  const getDeltaClass = (val) => val > 0 ? 'delta-worse' : val < 0 ? 'delta-better' : 'delta-neutral';
+  const getDeltaSymbol = (val) => val > 0 ? '▲' : val < 0 ? '▼' : '=';
 
   compareBox.innerHTML = `
+    <div class="compare-header">
+      <h3>Detailed Comparison</h3>
+      <p class="compare-timestamp">First: ${fmtDate(a.timestamp)} | Second: ${fmtDate(b.timestamp)}</p>
+    </div>
+    
     <div class="compare-grid">
       <article class="compare-card">
-        <h3>${a.supplier_name}</h3>
-        <p>${classToBadge(a.classification)} Score: ${a.risk_score}</p>
-        <p>Decision: ${a.policy_decision}</p>
-        <p>Action: ${a.recommended_action}</p>
+        <div class="compare-card-header">
+          <h4>${a.supplier_name}</h4>
+          <span class="compare-label">First Selection</span>
+        </div>
+        <div class="compare-details">
+          <div class="detail-row">
+            <span class="detail-label">Risk Classification:</span>
+            <span>${classToBadge(a.classification)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Risk Score:</span>
+            <span class="detail-value">${a.risk_score}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">CO2 Emissions:</span>
+            <span class="detail-value">${a.emissions} tons</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Violations:</span>
+            <span class="detail-value">${a.violations}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Policy Decision:</span>
+            <span class="detail-value">${a.policy_decision}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Human Approval:</span>
+            <span class="detail-value">${a.human_approval_required ? 'Required' : 'Not Required'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Recommended Action:</span>
+            <span class="detail-value">${a.recommended_action}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Policy Reason:</span>
+            <span class="detail-value detail-reason">${a.policy_reason}</span>
+          </div>
+        </div>
       </article>
+      
       <article class="compare-card">
-        <h3>${b.supplier_name}</h3>
-        <p>${classToBadge(b.classification)} Score: ${b.risk_score}</p>
-        <p>Decision: ${b.policy_decision}</p>
-        <p>Action: ${b.recommended_action}</p>
+        <div class="compare-card-header">
+          <h4>${b.supplier_name}</h4>
+          <span class="compare-label">Second Selection</span>
+        </div>
+        <div class="compare-details">
+          <div class="detail-row">
+            <span class="detail-label">Risk Classification:</span>
+            <span>${classToBadge(b.classification)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Risk Score:</span>
+            <span class="detail-value">${b.risk_score}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">CO2 Emissions:</span>
+            <span class="detail-value">${b.emissions} tons</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Violations:</span>
+            <span class="detail-value">${b.violations}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Policy Decision:</span>
+            <span class="detail-value">${b.policy_decision}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Human Approval:</span>
+            <span class="detail-value">${b.human_approval_required ? 'Required' : 'Not Required'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Recommended Action:</span>
+            <span class="detail-value">${b.recommended_action}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Policy Reason:</span>
+            <span class="detail-value detail-reason">${b.policy_reason}</span>
+          </div>
+        </div>
       </article>
     </div>
-    <p><strong>Risk Delta:</strong> ${delta} (second - first)</p>
+    
+    <div class="compare-delta">
+      <h4>Delta Analysis (Second - First)</h4>
+      <div class="delta-grid">
+        <div class="delta-item ${getDeltaClass(scoreDelta)}">
+          <span class="delta-symbol">${getDeltaSymbol(scoreDelta)}</span>
+          <span class="delta-label">Risk Score:</span>
+          <span class="delta-value">${scoreDelta > 0 ? '+' : ''}${scoreDelta}</span>
+        </div>
+        <div class="delta-item ${getDeltaClass(emissionsDelta)}">
+          <span class="delta-symbol">${getDeltaSymbol(emissionsDelta)}</span>
+          <span class="delta-label">Emissions:</span>
+          <span class="delta-value">${emissionsDelta > 0 ? '+' : ''}${emissionsDelta} tons</span>
+        </div>
+        <div class="delta-item ${getDeltaClass(violationsDelta)}">
+          <span class="delta-symbol">${getDeltaSymbol(violationsDelta)}</span>
+          <span class="delta-label">Violations:</span>
+          <span class="delta-value">${violationsDelta > 0 ? '+' : ''}${violationsDelta}</span>
+        </div>
+      </div>
+    </div>
   `;
 }
 

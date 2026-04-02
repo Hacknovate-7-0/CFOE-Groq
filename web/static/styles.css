@@ -393,21 +393,188 @@ tr:hover {
 .compare-box {
   border: 1px dashed #8db39f;
   border-radius: 14px;
-  padding: 12px;
+  padding: 16px;
   min-height: 80px;
+  background: #fbfff9;
+}
+
+.compare-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #b6ccbf;
+}
+
+.compare-header h3 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  color: #0f2f2a;
+}
+
+.compare-timestamp {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #4e6b63;
+  font-family: "IBM Plex Mono", monospace;
 }
 
 .compare-grid {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 20px;
 }
 
 .compare-card {
   border: 1px solid #b6ccbf;
+  border-radius: 12px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 47, 42, 0.08);
+}
+
+.compare-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #d0e0d5;
+}
+
+.compare-card-header h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #0d7c66;
+}
+
+.compare-label {
+  font-size: 0.75rem;
+  color: #5a7a6f;
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.compare-details {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f7fff5;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3d6b5d;
+}
+
+.detail-value {
+  font-size: 0.88rem;
+  color: #0f2f2a;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.detail-reason {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #35584f;
+}
+
+.compare-delta {
+  background: linear-gradient(135deg, #f0f8f4 0%, #fef9f0 100%);
+  border: 1px solid #b6ccbf;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 16px;
+}
+
+.compare-delta h4 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: #0f2f2a;
+}
+
+.delta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.delta-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
   border-radius: 10px;
-  padding: 10px;
-  background: #fbfff6;
+  border: 2px solid transparent;
+  background: #ffffff;
+}
+
+.delta-worse {
+  border-color: #d15252;
+  background: #fff5f5;
+}
+
+.delta-better {
+  border-color: #3aa471;
+  background: #f0fff7;
+}
+
+.delta-neutral {
+  border-color: #8db39f;
+  background: #fafffe;
+}
+
+.delta-symbol {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.delta-worse .delta-symbol {
+  color: #d15252;
+}
+
+.delta-better .delta-symbol {
+  color: #3aa471;
+}
+
+.delta-neutral .delta-symbol {
+  color: #8db39f;
+}
+
+.delta-label {
+  font-size: 0.8rem;
+  color: #4e6b63;
+  font-weight: 600;
+  text-align: center;
+}
+
+.delta-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.delta-worse .delta-value {
+  color: #d15252;
+}
+
+.delta-better .delta-value {
+  color: #3aa471;
+}
+
+.delta-neutral .delta-value {
+  color: #4e6b63;
 }
 
 .hint {
@@ -485,5 +652,20 @@ tr:hover {
 
   .compare-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .delta-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  
+  .compare-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
 }
