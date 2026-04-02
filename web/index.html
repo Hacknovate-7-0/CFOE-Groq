@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CfoE Control Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+
+<body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <main class="container">
+        <header class="hero">
+            <p class="hero-kicker">CfoE</p>
+            <h1>Supply Chain Carbon Control Room</h1>
+            <p class="hero-sub">Launch ESG audits on fresh supplier data, track risk movement, and compare decisions
+                side by side.</p>
+        </header>
+
+        <section class="panel form-panel">
+            <h2>Run New Audit</h2>
+            <form id="audit-form">
+                <div class="grid">
+                    <label>
+                        Supplier Name
+                        <input type="text" id="supplier_name" required minlength="2" maxlength="120"
+                            placeholder="NovaSteel Components" />
+                    </label>
+                    <label>
+                        Annual CO2 Emissions (tons)
+                        <input type="number" id="emissions" min="0" step="0.01" required placeholder="2100" />
+                    </label>
+                    <label>
+                        Regulatory Violations
+                        <input type="number" id="violations" min="0" max="500" required placeholder="2" />
+                    </label>
+                    <label>
+                        Extra Notes
+                        <textarea id="notes" rows="2" maxlength="1000"
+                            placeholder="Recent plant expansion, pending audit from regional regulator."></textarea>
+                    </label>
+                </div>
+                <button id="run-btn" type="submit">Run Audit</button>
+            </form>
+            <p id="status" class="status"></p>
+            <div id="log-panel" class="log-panel" style="display: none;">
+                <h3>Audit Progress</h3>
+                <div id="log-output" class="log-output"></div>
+            </div>
+        </section>
+
+        <section class="panel metrics-panel">
+            <h2>Portfolio Metrics</h2>
+            <div id="metrics" class="metrics-grid"></div>
+        </section>
+
+        <section class="panel latest-panel">
+            <h2>Latest Result</h2>
+            <div id="latest-result" class="latest-empty">No audit executed yet.</div>
+        </section>
+
+        <section class="panel history-panel">
+            <div class="history-head">
+                <h2>Audit History</h2>
+                <div class="history-controls">
+                    <input type="text" id="search" placeholder="Filter by supplier..." />
+                    <select id="risk-filter">
+                        <option value="ALL">All Risks</option>
+                        <option value="Low Risk">Low Risk</option>
+                        <option value="Moderate Risk">Moderate Risk</option>
+                        <option value="Critical Risk">Critical Risk</option>
+                    </select>
+                    <button id="refresh-btn" type="button">Refresh</button>
+                    <button id="clear-btn" type="button" class="danger">Clear</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Compare</th>
+                            <th>Supplier</th>
+                            <th>Risk</th>
+                            <th>Score</th>
+                            <th>Decision</th>
+                            <th>Info</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel compare-panel">
+            <h2>Compare Selected Audits</h2>
+            <p class="hint">Select exactly 2 history rows.</p>
+            <div id="compare-box" class="compare-box">No pair selected.</div>
+        </section>
+
+        <dialog id="download-dialog" class="download-dialog">
+            <form method="dialog" class="download-form" id="download-form">
+                <h3>Download Audit Output</h3>
+                <label>
+                    Audit
+                    <select id="download-audit-select" required></select>
+                </label>
+                <label>
+                    Format
+                    <select id="download-format-select" required></select>
+                </label>
+                <div class="download-actions">
+                    <button type="button" id="download-open-btn">Open Download</button>
+                    <button type="button" id="download-cancel-btn" class="danger">Cancel</button>
+                </div>
+            </form>
+        </dialog>
+
+        <dialog id="info-dialog" class="download-dialog">
+            <form method="dialog" class="download-form" id="info-form">
+                <h3>Audit Info</h3>
+                <div id="info-content" class="info-content"></div>
+                <div class="download-actions">
+                    <button type="button" id="info-close-btn" class="danger">Close</button>
+                </div>
+            </form>
+        </dialog>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
