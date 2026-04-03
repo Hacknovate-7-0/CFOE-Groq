@@ -39,6 +39,7 @@ WEB_DIR = BASE_DIR / "web"
 STATIC_DIR = WEB_DIR / "static"
 DATA_DIR = BASE_DIR / "data"
 HISTORY_PATH = DATA_DIR / "audit_history.json"
+PENDING_PATH = DATA_DIR / "pending_approvals.json"
 OUTPUT_DIR = BASE_DIR / "outputs"
 OUTPUT_CSV_PATH = OUTPUT_DIR / "audits_master.csv"
 
@@ -65,6 +66,7 @@ class AuditResponse(BaseModel):
     classification: str
     emissions_score: float
     violations_score: float
+    external_risk_score: float
     policy_decision: str
     human_approval_required: bool
     policy_reason: str
@@ -72,6 +74,14 @@ class AuditResponse(BaseModel):
     report_text: str
     report_source: str
     download_links: dict[str, str]
+    status: str  # "completed" or "pending_approval"
+
+
+class ApprovalRequest(BaseModel):
+    audit_id: str
+    decision: str  # "approve" or "reject"
+    approver_name: str = Field(min_length=2, max_length=100)
+    approval_notes: str = Field(default="", max_length=500)
 
 
 app = FastAPI(
@@ -118,6 +128,9 @@ def ensure_storage() -> None:
 
     if not HISTORY_PATH.exists():
         HISTORY_PATH.write_text("[]", encoding="utf-8")
+    
+    if not PENDING_PATH.exists():
+        PENDING_PATH.write_text("[]", encoding="utf-8")
 
     if not OUTPUT_CSV_PATH.exists():
         with OUTPUT_CSV_PATH.open("w", encoding="utf-8", newline="") as csv_file:
@@ -153,6 +166,22 @@ def load_history() -> list[dict[str, Any]]:
 def save_history(history: list[dict[str, Any]]) -> None:
     with lock:
         HISTORY_PATH.write_text(json.dumps(history, indent=2), encoding="utf-8")
+
+
+def load_pending() -> list[dict[str, Any]]:
+    ensure_storage()
+    with lock:
+        try:
+            content = PENDING_PATH.read_text(encoding="utf-8").strip() or "[]"
+            data = json.loads(content)
+            return data if isinstance(data, list) else []
+        except json.JSONDecodeError:
+            return []
+
+
+def save_pending(pending: list[dict[str, Any]]) -> None:
+    with lock:
+        PENDING_PATH.write_text(json.dumps(pending, indent=2), encoding="utf-8")
 
 
 def make_audit_prompt(req: AuditRequest) -> str:
@@ -195,6 +224,7 @@ def run_audit(req: AuditRequest) -> dict[str, Any]:
 
     report_source = "deterministic-fallback"
     report_text = build_fallback_report(req, risk_data, policy_data)
+    external_risk_score = 0.0
 
     client = get_client()
     if client is not None:
@@ -203,6 +233,11 @@ def run_audit(req: AuditRequest) -> dict[str, Any]:
             coordinator = create_root_coordinator(client)
             response = coordinator.generate_content(make_audit_prompt(req))
             report_text = response.text
+            
+            # Extract external_risk_score from coordinator context if available
+            if hasattr(coordinator, 'context') and 'external_risk_score' in coordinator.context.state:
+                external_risk_score = coordinator.context.state.get('external_risk_score', 0.0)
+            
             report_source = "groq-llama"
             log_queue.put({"type": "success", "message": "✓ AI report generated successfully"})
         except Exception as e:
@@ -224,6 +259,7 @@ def run_audit(req: AuditRequest) -> dict[str, Any]:
         "classification": risk_data["classification"],
         "emissions_score": risk_data["emissions_score"],
         "violations_score": risk_data["violations_score"],
+        "external_risk_score": external_risk_score,
         "policy_decision": policy_data["decision"],
         "human_approval_required": policy_data["human_approval_required"],
         "policy_reason": policy_data["reason"],
@@ -231,9 +267,20 @@ def run_audit(req: AuditRequest) -> dict[str, Any]:
         "report_text": report_text,
         "report_source": report_source,
         "download_links": {},
+        "status": "pending_approval" if policy_data["human_approval_required"] else "completed",
     }
     
-    log_queue.put({"type": "success", "message": f"✓ Audit complete for {req.supplier_name}"})
+    # HITL Workflow Pause: If human approval required, save to pending queue
+    if policy_data["human_approval_required"]:
+        log_queue.put({"type": "warning", "message": "🚨 CRITICAL RISK - Audit paused for human approval"})
+        result["status"] = "pending_approval"
+        result["approval_status"] = "pending"
+        result["approver_name"] = None
+        result["approval_notes"] = None
+        result["approval_timestamp"] = None
+    else:
+        log_queue.put({"type": "success", "message": f"✓ Audit complete for {req.supplier_name}"})
+    
     return result
 
 
@@ -447,9 +494,17 @@ def create_audit(payload: AuditRequest) -> dict[str, Any]:
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"Audit failed: {exc}") from exc
 
-    history = load_history()
-    history.insert(0, result)
-    save_history(history[:500])
+    # If human approval required, save to pending queue instead of history
+    if result.get("human_approval_required", False):
+        pending = load_pending()
+        pending.insert(0, result)
+        save_pending(pending)
+    else:
+        # Auto-approved audits go directly to history
+        history = load_history()
+        history.insert(0, result)
+        save_history(history[:500])
+    
     return result
 
 
@@ -459,9 +514,89 @@ def list_audits(limit: int = 100) -> dict[str, Any]:
     return {"items": history[:max(1, min(limit, 500))], "count": len(history)}
 
 
+@app.get("/api/approvals")
+def list_pending_approvals() -> dict[str, Any]:
+    """Get all audits pending human approval"""
+    pending = load_pending()
+    return {"items": pending, "count": len(pending)}
+
+
+@app.post("/api/approvals/{audit_id}/approve")
+def approve_audit(audit_id: str, approval: ApprovalRequest) -> dict[str, Any]:
+    """Approve a pending audit and move it to history"""
+    if approval.audit_id != audit_id:
+        raise HTTPException(status_code=400, detail="Audit ID mismatch")
+    
+    if approval.decision != "approve":
+        raise HTTPException(status_code=400, detail="Use /reject endpoint for rejections")
+    
+    pending = load_pending()
+    audit = next((x for x in pending if x.get("audit_id") == audit_id), None)
+    
+    if audit is None:
+        raise HTTPException(status_code=404, detail="Pending audit not found")
+    
+    # Update audit with approval info
+    audit["status"] = "completed"
+    audit["approval_status"] = "approved"
+    audit["approver_name"] = approval.approver_name
+    audit["approval_notes"] = approval.approval_notes
+    audit["approval_timestamp"] = datetime.now(timezone.utc).isoformat()
+    
+    # Remove from pending and add to history
+    pending = [x for x in pending if x.get("audit_id") != audit_id]
+    save_pending(pending)
+    
+    history = load_history()
+    history.insert(0, audit)
+    save_history(history[:500])
+    
+    return {"status": "approved", "audit": audit}
+
+
+@app.post("/api/approvals/{audit_id}/reject")
+def reject_audit(audit_id: str, approval: ApprovalRequest) -> dict[str, Any]:
+    """Reject a pending audit"""
+    if approval.audit_id != audit_id:
+        raise HTTPException(status_code=400, detail="Audit ID mismatch")
+    
+    if approval.decision != "reject":
+        raise HTTPException(status_code=400, detail="Use /approve endpoint for approvals")
+    
+    pending = load_pending()
+    audit = next((x for x in pending if x.get("audit_id") == audit_id), None)
+    
+    if audit is None:
+        raise HTTPException(status_code=404, detail="Pending audit not found")
+    
+    # Update audit with rejection info
+    audit["status"] = "rejected"
+    audit["approval_status"] = "rejected"
+    audit["approver_name"] = approval.approver_name
+    audit["approval_notes"] = approval.approval_notes
+    audit["approval_timestamp"] = datetime.now(timezone.utc).isoformat()
+    
+    # Remove from pending and add to history (with rejected status)
+    pending = [x for x in pending if x.get("audit_id") != audit_id]
+    save_pending(pending)
+    
+    history = load_history()
+    history.insert(0, audit)
+    save_history(history[:500])
+    
+    return {"status": "rejected", "audit": audit}
+
+
 @app.delete("/api/audits")
 def clear_audits() -> dict[str, Any]:
     save_history([])
+    return {"status": "ok"}
+
+
+@app.delete("/api/approvals")
+def clear_pending_approvals() -> dict[str, Any]:
+    """Clear all pending approvals"""
+    save_pending([])
     return {"status": "ok"}
 
 

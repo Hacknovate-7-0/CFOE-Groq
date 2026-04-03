@@ -67,6 +67,14 @@
             <div id="latest-result" class="latest-empty">No audit executed yet.</div>
         </section>
 
+        <section class="panel approval-panel" id="approval-panel" style="display: none;">
+            <div class="approval-head">
+                <h2>🚨 Pending Approvals (HITL)</h2>
+                <p class="approval-hint">Critical risk audits require human review before completion</p>
+            </div>
+            <div id="approval-list" class="approval-list"></div>
+        </section>
+
         <section class="panel history-panel">
             <div class="history-head">
                 <h2>Audit History</h2>
@@ -130,6 +138,26 @@
                 <div id="info-content" class="info-content"></div>
                 <div class="download-actions">
                     <button type="button" id="info-close-btn" class="danger">Close</button>
+                </div>
+            </form>
+        </dialog>
+
+        <dialog id="approval-dialog" class="download-dialog">
+            <form method="dialog" class="download-form" id="approval-form">
+                <h3>Human Approval Required</h3>
+                <div id="approval-content" class="info-content"></div>
+                <label>
+                    Your Name
+                    <input type="text" id="approver-name" required minlength="2" maxlength="100" placeholder="John Doe" />
+                </label>
+                <label>
+                    Approval Notes
+                    <textarea id="approval-notes" rows="3" maxlength="500" placeholder="Reason for approval/rejection..."></textarea>
+                </label>
+                <div class="download-actions">
+                    <button type="button" id="approve-btn" class="approve-btn">Approve</button>
+                    <button type="button" id="reject-btn" class="danger">Reject</button>
+                    <button type="button" id="approval-cancel-btn" class="secondary">Cancel</button>
                 </div>
             </form>
         </dialog>

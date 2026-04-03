@@ -15,15 +15,26 @@ const downloadCancelBtn = document.getElementById("download-cancel-btn");
 const infoDialog = document.getElementById("info-dialog");
 const infoContent = document.getElementById("info-content");
 const infoCloseBtn = document.getElementById("info-close-btn");
+const approvalPanel = document.getElementById("approval-panel");
+const approvalList = document.getElementById("approval-list");
+const approvalDialog = document.getElementById("approval-dialog");
+const approvalContent = document.getElementById("approval-content");
+const approverNameInput = document.getElementById("approver-name");
+const approvalNotesInput = document.getElementById("approval-notes");
+const approveBtn = document.getElementById("approve-btn");
+const rejectBtn = document.getElementById("reject-btn");
+const approvalCancelBtn = document.getElementById("approval-cancel-btn");
 const supplierInput = document.getElementById("supplier_name");
 const emissionsInput = document.getElementById("emissions");
 const violationsInput = document.getElementById("violations");
 const notesInput = document.getElementById("notes");
 
 let audits = [];
+let pendingApprovals = [];
 let selectedForCompare = [];
 let visibleAudits = [];
 let logSocket = null;
+let currentApprovalAuditId = null;
 
 const downloadableFormats = ["pdf", "docx"];
 
@@ -124,20 +135,38 @@ async function fetchHistory() {
   if (audits.length > 0) {
     renderLatest(audits[0]);
   }
+  
+  await fetchPendingApprovals();
+}
+
+async function fetchPendingApprovals() {
+  const res = await fetch("/api/approvals");
+  const data = await res.json();
+  pendingApprovals = data.items || [];
+  renderPendingApprovals();
 }
 
 function renderLatest(item) {
+  const statusBadge = item.status === "pending_approval" 
+    ? '<span class="badge critical">Pending Approval</span>' 
+    : item.approval_status === "rejected"
+    ? '<span class="badge critical">Rejected</span>'
+    : '<span class="badge low">Completed</span>';
+  
   latestEl.innerHTML = `
     <div class="latest-block">
       <div class="badges">
         ${classToBadge(item.classification)}
         <span class="badge low">Score ${item.risk_score}</span>
         <span class="badge low">${item.report_source}</span>
+        ${statusBadge}
       </div>
       <div><strong>${item.supplier_name}</strong> | Emissions ${item.emissions} | Violations ${item.violations}</div>
       <div><strong>Decision:</strong> ${item.policy_decision}</div>
       <div><strong>Reason:</strong> ${item.policy_reason}</div>
       <div><strong>Action:</strong> ${item.recommended_action}</div>
+      ${item.approver_name ? `<div><strong>Approved by:</strong> ${item.approver_name} on ${fmtDate(item.approval_timestamp)}</div>` : ''}
+      ${item.approval_notes ? `<div><strong>Approval Notes:</strong> ${item.approval_notes}</div>` : ''}
       <div class="report">${item.report_text || "No report generated."}</div>
     </div>
   `;
@@ -299,6 +328,122 @@ function openInfoDialog(item) {
   }
 
   infoDialog.showModal();
+}
+
+function renderPendingApprovals() {
+  if (pendingApprovals.length === 0) {
+    approvalPanel.style.display = 'none';
+    return;
+  }
+  
+  approvalPanel.style.display = 'block';
+  
+  approvalList.innerHTML = pendingApprovals.map((item) => {
+    return `
+      <article class="approval-card">
+        <div class="approval-header">
+          <h3>${item.supplier_name}</h3>
+          ${classToBadge(item.classification)}
+        </div>
+        <div class="approval-details">
+          <div class="approval-row">
+            <span class="approval-label">Risk Score:</span>
+            <span class="approval-value">${item.risk_score}</span>
+          </div>
+          <div class="approval-row">
+            <span class="approval-label">Emissions:</span>
+            <span class="approval-value">${item.emissions} tons</span>
+          </div>
+          <div class="approval-row">
+            <span class="approval-label">Violations:</span>
+            <span class="approval-value">${item.violations}</span>
+          </div>
+          <div class="approval-row">
+            <span class="approval-label">Policy Decision:</span>
+            <span class="approval-value">${item.policy_decision}</span>
+          </div>
+          <div class="approval-row">
+            <span class="approval-label">Submitted:</span>
+            <span class="approval-value">${fmtDate(item.timestamp)}</span>
+          </div>
+        </div>
+        <div class="approval-actions">
+          <button type="button" class="review-btn" data-audit-id="${item.audit_id}">Review & Decide</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+  
+  approvalList.querySelectorAll(".review-btn").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      const id = event.currentTarget.dataset.auditId;
+      const item = pendingApprovals.find((x) => x.audit_id === id);
+      if (item) {
+        openApprovalDialog(item);
+      }
+    });
+  });
+}
+
+function openApprovalDialog(item) {
+  currentApprovalAuditId = item.audit_id;
+  
+  approvalContent.innerHTML = `
+    <p><strong>Supplier:</strong> ${item.supplier_name}</p>
+    <p><strong>Risk Score:</strong> ${item.risk_score} (${item.classification})</p>
+    <p><strong>Emissions:</strong> ${item.emissions} tons CO2</p>
+    <p><strong>Violations:</strong> ${item.violations}</p>
+    <p><strong>Policy Decision:</strong> ${item.policy_decision}</p>
+    <p><strong>Policy Reason:</strong> ${item.policy_reason}</p>
+    <p><strong>Recommended Action:</strong> ${item.recommended_action}</p>
+    <div class="approval-report"><strong>Executive Report Preview</strong><br/>${item.report_text.substring(0, 500)}...</div>
+  `;
+  
+  approverNameInput.value = "";
+  approvalNotesInput.value = "";
+  approvalDialog.showModal();
+}
+
+async function handleApproval(decision) {
+  const approverName = approverNameInput.value.trim();
+  const approvalNotes = approvalNotesInput.value.trim();
+  
+  if (!approverName) {
+    setStatus("Please enter your name", true);
+    return;
+  }
+  
+  const endpoint = decision === "approve" 
+    ? `/api/approvals/${currentApprovalAuditId}/approve`
+    : `/api/approvals/${currentApprovalAuditId}/reject`;
+  
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        audit_id: currentApprovalAuditId,
+        decision: decision,
+        approver_name: approverName,
+        approval_notes: approvalNotes
+      })
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Approval failed");
+    }
+    
+    const result = await res.json();
+    approvalDialog.close();
+    setStatus(`Audit ${decision}d successfully by ${approverName}`);
+    
+    await fetchMetrics();
+    await fetchHistory();
+    
+  } catch (err) {
+    setStatus(err.message, true);
+  }
 }
 
 function renderCompare() {
@@ -485,6 +630,9 @@ downloadAuditSelect.addEventListener("change", refreshDownloadFormatOptions);
 downloadOpenBtn.addEventListener("click", openSelectedDownload);
 downloadCancelBtn.addEventListener("click", () => downloadDialog.close());
 infoCloseBtn.addEventListener("click", () => infoDialog.close());
+approveBtn.addEventListener("click", () => handleApproval("approve"));
+rejectBtn.addEventListener("click", () => handleApproval("reject"));
+approvalCancelBtn.addEventListener("click", () => approvalDialog.close());
 document.getElementById("refresh-btn").addEventListener("click", async () => {
   await fetchMetrics();
   await fetchHistory();

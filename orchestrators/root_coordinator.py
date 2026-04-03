@@ -34,6 +34,7 @@ class RootCoordinator:
 
     def __init__(self, client):
         self.client = client
+        self.context = None  # Store context for external access
 
     @staticmethod
     def _extract_field(pattern: str, text: str, cast_type):
@@ -84,6 +85,7 @@ class RootCoordinator:
                 policy_agent,
                 reporting_agent,
             ])
+            self.context = orchestrator.context  # Store for external access
             print("✓ Sequential pipeline configured\n")
             
             # Initialize context with supplier data
